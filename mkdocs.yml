@@ -44,6 +44,7 @@ nav:
     - features/static-assets.md
     - features/build-cache.md
     - features/debugging.md
+    - features/reproducible-builds.md
   - Advanced:
     - advanced/go-packages.md
     - advanced/limitations.md
@@ -59,6 +60,7 @@ nav:
     - 'ko build': reference/ko_build.md
     - 'ko create': reference/ko_create.md
     - 'ko delete': reference/ko_delete.md
+    - 'ko lock': reference/ko_lock.md
     - 'ko login': reference/ko_login.md
     - 'ko resolve': reference/ko_resolve.md
     - 'ko run': reference/ko_run.md

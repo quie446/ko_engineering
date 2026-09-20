@@ -20,12 +20,15 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.yaml.in/yaml/v4"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/labels"
@@ -53,6 +56,22 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	kodataCreationTime, err := getKoDataCreationTime()
 	if err != nil {
 		return nil, err
+	}
+
+	if bo.Reproducible {
+		// Pin all timestamps to the Unix epoch unless the user provided
+		// explicit values via SOURCE_DATE_EPOCH / KO_DATA_DATE_EPOCH.
+		if creationTime == nil {
+			creationTime = &v1.Time{Time: time.Unix(0, 0).UTC()}
+		}
+		if kodataCreationTime == nil {
+			kodataCreationTime = creationTime
+		}
+		// Remove sources of nondeterminism from the Go binary itself:
+		// VCS stamping embeds the working tree state, and the build ID
+		// can vary with the local toolchain environment.
+		bo.DefaultFlags = appendUnlessFlag(bo.DefaultFlags, "-buildvcs", "-buildvcs=false")
+		bo.DefaultLdflags = appendUnlessFlag(bo.DefaultLdflags, "-buildid", "-buildid=")
 	}
 
 	if len(bo.Platforms) == 0 && len(bo.DefaultPlatforms) > 0 {
@@ -145,6 +164,17 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	return opts, nil
 }
 
+// appendUnlessFlag appends value to list unless an entry with the given
+// flag prefix (e.g. "-buildvcs") is already present.
+func appendUnlessFlag(list []string, prefix, value string) []string {
+	for _, s := range list {
+		if s == prefix || strings.HasPrefix(s, prefix+"=") {
+			return list
+		}
+	}
+	return append(list, value)
+}
+
 // NewBuilder creates a ko builder
 func NewBuilder(ctx context.Context, bo *options.BuildOptions) (build.Interface, error) {
 	return makeBuilder(ctx, bo)
@@ -153,6 +183,16 @@ func NewBuilder(ctx context.Context, bo *options.BuildOptions) (build.Interface,
 func makeBuilder(ctx context.Context, bo *options.BuildOptions) (*build.Caching, error) {
 	if err := bo.LoadConfig(); err != nil {
 		return nil, err
+	}
+	if bo.Reproducible {
+		path := lockFilePath(bo)
+		if err := applyLockFileToBuildOptions(bo, path); err != nil {
+			return nil, fmt.Errorf("applying lock file %s: %w", path, err)
+		} else if _, err := os.Stat(path); err == nil {
+			log.Printf("Reproducible build: pinned base images from %s", path)
+		} else {
+			log.Printf("Reproducible build: no lock file found at %s; base images are not pinned. Run `ko lock` to create one.", path)
+		}
 	}
 	opt, err := gobuildOptions(bo)
 	if err != nil {

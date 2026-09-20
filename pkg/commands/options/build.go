@@ -84,9 +84,26 @@ type BuildOptions struct {
 	// `AddBuildOptions()` defaults this field to `true`.
 	Trimpath bool
 
+	// Reproducible enables a bundle of settings that make `ko build` produce
+	// bit-for-bit reproducible image digests for the same module path, commit
+	// and base image reference: fixed file/image timestamps (unless
+	// SOURCE_DATE_EPOCH/KO_DATA_DATE_EPOCH are set), `-buildvcs=false`,
+	// stripped Go build IDs, and digest-pinned base images read from the
+	// lock file (see LockFile).
+	Reproducible bool
+
+	// LockFile is the path to the ko lock file that pins base image
+	// references to digests. It is written by `ko lock` and consumed by
+	// builds running with Reproducible enabled.
+	LockFile string
+
 	// BuildConfigs stores the per-image build config from `.ko.yaml`.
 	BuildConfigs map[string]build.Config
 }
+
+// DefaultLockFile is the default path of the ko lock file, relative to the
+// working directory.
+const DefaultLockFile = "ko.lock"
 
 func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 	cmd.Flags().IntVarP(&bo.ConcurrentBuilds, "jobs", "j", 0,
@@ -109,6 +126,10 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The default user the image should be run as.")
 	cmd.Flags().BoolVar(&bo.Debug, "debug", bo.Debug,
 		"Include Delve debugger into image and wrap around ko-app. This debugger will listen to port 40000.")
+	cmd.Flags().BoolVar(&bo.Reproducible, "reproducible", os.Getenv("KO_REPRODUCIBLE") == "true",
+		"Enable reproducible builds: fixed timestamps, no VCS stamping, stripped build IDs, and base images pinned by the lock file. Can also be enabled with KO_REPRODUCIBLE=true.")
+	cmd.Flags().StringVar(&bo.LockFile, "lock-file", DefaultLockFile,
+		"Path to the ko lock file pinning base images to digests (used with --reproducible, written by 'ko lock').")
 	bo.Trimpath = true
 }
 
