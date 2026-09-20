@@ -55,10 +55,13 @@ ko build IMPORTPATH... [flags]
   -j, --jobs int                   The maximum number of concurrent builds (default GOMAXPROCS)
       --ldflags strings            ldflags to pass to go build (may be repeated)
   -L, --local                      Load into images to local docker daemon.
+      --locked                     Resolve base images from the lockfile instead of .ko.yaml, failing if they drifted. Can also be enabled with KO_LOCKED=true.
+      --lockfile ko lock           Path to the base image lockfile used with --locked (see ko lock). Can also be set with KO_LOCKFILE. (default "ko.lock")
       --oci-layout-path string     Path to save the OCI image layout of the built images
       --platform strings           Which platform to use when pulling a multi-platform base. Format: all | <os>[/<arch>[/<variant>]][,platform]*
   -P, --preserve-import-paths      Whether to preserve the full import path after KO_DOCKER_REPO.
       --push                       Push images to KO_DOCKER_REPO (default true)
+      --reproducible               Build reproducibly: pin image timestamps (see SOURCE_DATE_EPOCH), disable VCS stamping, and strip the Go build ID. Can also be enabled with KO_REPRODUCIBLE=true.
       --sbom string                The SBOM media type to use (none will disable SBOM synthesis and upload). (default "spdx")
       --sbom-dir string            Path to directory where the SBOM will be written.
       --tag-only                   Include tags but not digests in resolved image references. Useful when digests are not preserved when images are repopulated.

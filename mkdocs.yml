@@ -46,6 +46,7 @@ nav:
     - features/debugging.md
   - Advanced:
     - advanced/go-packages.md
+    - advanced/reproducible-builds.md
     - advanced/limitations.md
     - advanced/migrating-from-dockerfile.md
     - advanced/faq.md
@@ -59,6 +60,7 @@ nav:
     - 'ko build': reference/ko_build.md
     - 'ko create': reference/ko_create.md
     - 'ko delete': reference/ko_delete.md
+    - 'ko lock': reference/ko_lock.md
     - 'ko login': reference/ko_login.md
     - 'ko resolve': reference/ko_resolve.md
     - 'ko run': reference/ko_run.md

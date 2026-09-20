@@ -33,6 +33,14 @@ baseImageOverrides:
   github.com/my-user/my-repo/cmd/foo: registry.example.com/base/for/foo
 ```
 
+### Pinning Base Images
+
+Base image references such as `registry.example.com/base/image:latest` are
+mutable. To pin them to immutable digests, run `ko lock` to generate a
+committable `ko.lock` file, and build with `--locked` (or `KO_LOCKED=true`)
+to consume it. See [Reproducible Builds and Base Image Locking](advanced/reproducible-builds.md)
+for details.
+
 ### Overriding Go build settings
 
 By default, `ko` builds the binary with no additional build flags other than
@@ -217,4 +225,3 @@ defaultBaseImage: ko.local/example/base/image
 cluster, if available, by setting `KO_DOCKER_REPO=kind.local`. By default this
 loads into the default KinD cluster name (`kind`). To load into another KinD
 cluster, set `KIND_CLUSTER_NAME=my-other-cluster`.
-

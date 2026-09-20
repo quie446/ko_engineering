@@ -19,6 +19,7 @@ ko [flags]
 * [ko build](ko_build.md)	 - Build and publish container images from the given importpaths.
 * [ko create](ko_create.md)	 - Create the input files with image references resolved to built/pushed image digests.
 * [ko delete](ko_delete.md)	 - See "kubectl help delete" for detailed usage.
+* [ko lock](ko_lock.md)	 - Pin base image references to digests in a lockfile
 * [ko login](ko_login.md)	 - Log in to a registry
 * [ko resolve](ko_resolve.md)	 - Print the input files with image references resolved to built/pushed image digests.
 * [ko run](ko_run.md)	 - A variant of `kubectl run` that containerizes IMPORTPATH first.

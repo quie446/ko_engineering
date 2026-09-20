@@ -25,6 +25,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -622,6 +623,80 @@ func writeTempFile(_ context.Context, buildCtx buildContext) (string, error) {
 		return "", err
 	}
 	return file.Name(), nil
+}
+
+func TestGoBuildReproducible(t *testing.T) {
+	base, err := random.Image(1024, 3)
+	if err != nil {
+		t.Fatalf("random.Image() = %v", err)
+	}
+	importpath := "github.com/google/ko"
+
+	type captured struct {
+		flags   []string
+		ldflags []string
+	}
+	var builds []captured
+	capture := func(_ context.Context, buildCtx buildContext) (string, error) {
+		builds = append(builds, captured{flags: buildCtx.flags, ldflags: buildCtx.ldflags})
+		return writeTempFile(nil, buildCtx) //nolint:staticcheck // context not needed by the fake
+	}
+
+	creationTime := v1.Time{Time: time.Unix(5000, 0)}
+	ng, err := NewGo(
+		context.Background(),
+		"",
+		WithReproducible(),
+		WithCreationTime(creationTime),
+		WithKoDataCreationTime(creationTime),
+		WithBaseImages(func(context.Context, string) (name.Reference, Result, error) { return baseRef, base, nil }),
+		withBuilder(capture),
+		withSBOMber(fauxSBOM),
+		WithLdflags([]string{"-s", "-w"}),
+		WithPlatforms("all"),
+	)
+	if err != nil {
+		t.Fatalf("NewGo() = %v", err)
+	}
+
+	ref := StrictScheme + filepath.Join(importpath, "test")
+	result, err := ng.Build(context.Background(), ref)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+
+	if len(builds) == 0 {
+		t.Fatal("builder was not invoked")
+	}
+	if got := builds[0].flags; !slices.Contains(got, "-buildvcs=false") {
+		t.Errorf("reproducible build flags %v missing -buildvcs=false", got)
+	}
+	if got := builds[0].ldflags; !slices.Contains(got, "-buildid=") {
+		t.Errorf("reproducible build ldflags %v missing -buildid=", got)
+	}
+	// User-supplied ldflags must be preserved.
+	for _, want := range []string{"-s", "-w"} {
+		if !slices.Contains(builds[0].ldflags, want) {
+			t.Errorf("reproducible build ldflags %v missing user-supplied %q", builds[0].ldflags, want)
+		}
+	}
+
+	// Building again must produce the same digest.
+	result2, err := ng.Build(context.Background(), ref)
+	if err != nil {
+		t.Fatalf("Build() = %v", err)
+	}
+	d1, err := result.Digest()
+	if err != nil {
+		t.Fatalf("Digest() = %v", err)
+	}
+	d2, err := result2.Digest()
+	if err != nil {
+		t.Fatalf("Digest() = %v", err)
+	}
+	if d1 != d2 {
+		t.Errorf("Digest mismatch: %s != %s", d1, d2)
+	}
 }
 
 func TestGoBuildNoKoData(t *testing.T) {

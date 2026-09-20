@@ -47,6 +47,21 @@ func WithKoDataCreationTime(t v1.Time) Option {
 	}
 }
 
+// WithReproducible is a functional option for making builds reproducible.
+//
+// When enabled, ko hardens the `go build` invocation against common sources
+// of nondeterminism: VCS stamping is disabled (-buildvcs=false, so a dirty
+// worktree does not change the binary) and the Go build ID is stripped
+// (-ldflags=-buildid=). Combine with WithCreationTime (or SOURCE_DATE_EPOCH)
+// to also fix image timestamps, and pin the base image to a digest (e.g. via
+// a lockfile) for a fully reproducible image digest.
+func WithReproducible() Option {
+	return func(gbo *gobuildOpener) error {
+		gbo.reproducible = true
+		return nil
+	}
+}
+
 // WithDisabledOptimizations is a functional option for disabling optimizations
 // when compiling.
 func WithDisabledOptimizations() Option {

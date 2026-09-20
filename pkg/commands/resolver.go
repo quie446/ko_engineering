@@ -24,8 +24,10 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/go-containerregistry/pkg/name"
+	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"go.yaml.in/yaml/v4"
 	"golang.org/x/sync/errgroup"
 	"k8s.io/apimachinery/pkg/labels"
@@ -53,6 +55,26 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	kodataCreationTime, err := getKoDataCreationTime()
 	if err != nil {
 		return nil, err
+	}
+
+	if bo.Reproducible {
+		// In reproducible mode, pin timestamps to the Unix epoch unless
+		// the user provided explicit values via SOURCE_DATE_EPOCH and
+		// KO_DATA_DATE_EPOCH.
+		if creationTime == nil {
+			creationTime = &v1.Time{Time: time.Unix(0, 0).UTC()}
+		}
+		if kodataCreationTime == nil {
+			kodataCreationTime = &v1.Time{Time: time.Unix(0, 0).UTC()}
+		}
+	}
+
+	if bo.Locked {
+		// Replace the configured (mutable) base image references with the
+		// digest-pinned references from the lockfile.
+		if err := applyBaseImageLock(bo); err != nil {
+			return nil, err
+		}
 	}
 
 	if len(bo.Platforms) == 0 && len(bo.DefaultPlatforms) > 0 {
@@ -107,6 +129,9 @@ func gobuildOptions(bo *options.BuildOptions) ([]build.Option, error) {
 	if bo.Debug {
 		opts = append(opts, build.WithDebugger())
 		opts = append(opts, build.WithDisabledOptimizations()) // also needed for Delve
+	}
+	if bo.Reproducible {
+		opts = append(opts, build.WithReproducible())
 	}
 	switch bo.SBOM {
 	case "none":

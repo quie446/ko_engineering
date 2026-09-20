@@ -1,0 +1,39 @@
+name: Reproducibility
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+permissions: {}
+
+jobs:
+
+  reproducible-build:
+    name: Reproducible Build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: 'stable'
+
+      - name: Build ko
+        run: go build -o "$GITHUB_WORKSPACE/ko" .
+
+      # When a ko.lock is committed, this also verifies that the lockfile
+      # matches the current base image resolution (ko lock --check).
+      - name: Build twice and compare digests
+        run: KO="$GITHUB_WORKSPACE/ko" hack/verify-reproducible.sh ./test
+        env:
+          KO_DOCKER_REPO: example.com/ko-reproducible

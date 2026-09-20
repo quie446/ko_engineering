@@ -30,6 +30,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
@@ -93,6 +94,7 @@ type gobuild struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	reproducible         bool
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -122,6 +124,7 @@ type gobuildOpener struct {
 	build                builder
 	sbom                 sbomber
 	sbomDir              string
+	reproducible         bool
 	disableOptimizations bool
 	trimpath             bool
 	buildConfigs         map[string]Config
@@ -161,6 +164,7 @@ func (gbo *gobuildOpener) Open() (Interface, error) {
 		build:                gbo.build,
 		sbom:                 gbo.sbom,
 		sbomDir:              gbo.sbomDir,
+		reproducible:         gbo.reproducible,
 		disableOptimizations: gbo.disableOptimizations,
 		trimpath:             gbo.trimpath,
 		buildConfigs:         gbo.buildConfigs,
@@ -1175,6 +1179,16 @@ func (g *gobuild) buildOne(ctx context.Context, refStr string, base v1.Image, pl
 		if len(ldflags) == 0 {
 			ldflags = g.defaultLdflags
 		}
+	}
+
+	if g.reproducible {
+		// Harden the build against common sources of nondeterminism:
+		// disable VCS stamping so that a dirty worktree does not change
+		// the resulting binary, and strip the Go build ID. These are
+		// appended last so that they take precedence over user-supplied
+		// values. Clone the slices to avoid mutating shared config.
+		flags = append(slices.Clone(flags), "-buildvcs=false")
+		ldflags = append(slices.Clone(ldflags), "-buildid=")
 	}
 
 	// Do the build into a temporary file.

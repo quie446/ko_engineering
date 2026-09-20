@@ -20,6 +20,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/google/go-containerregistry/pkg/name"
@@ -78,6 +79,22 @@ type BuildOptions struct {
 
 	InsecureRegistry bool
 
+	// Reproducible enables reproducible build mode: image timestamps are
+	// pinned (SOURCE_DATE_EPOCH/KO_DATA_DATE_EPOCH, or the Unix epoch when
+	// unset), VCS stamping is disabled, and the Go build ID is stripped, so
+	// that repeated builds of the same commit against the same base image
+	// produce identical digests.
+	Reproducible bool
+
+	// Locked makes ko resolve base images from the lockfile (see
+	// LockfilePath) instead of the mutable references in .ko.yaml, and
+	// fails if the configuration has drifted from the lockfile.
+	Locked bool
+
+	// LockfilePath is the path to the base image lockfile written by
+	// `ko lock` and consumed when Locked is set.
+	LockfilePath string
+
 	// Trimpath controls whether ko adds the `-trimpath` flag to `go build` by default.
 	// The `-trimpath` flags aids in achieving reproducible builds, but it removes path information that is useful for interactive debugging.
 	// Set this field to `false` and `DisableOptimizations` to `true` if you want to interactively debug the binary in the resulting image.
@@ -109,7 +126,29 @@ func AddBuildOptions(cmd *cobra.Command, bo *BuildOptions) {
 		"The default user the image should be run as.")
 	cmd.Flags().BoolVar(&bo.Debug, "debug", bo.Debug,
 		"Include Delve debugger into image and wrap around ko-app. This debugger will listen to port 40000.")
+	cmd.Flags().BoolVar(&bo.Reproducible, "reproducible", envBool("KO_REPRODUCIBLE"),
+		"Build reproducibly: pin image timestamps (see SOURCE_DATE_EPOCH), disable VCS stamping, and strip the Go build ID. Can also be enabled with KO_REPRODUCIBLE=true.")
+	cmd.Flags().BoolVar(&bo.Locked, "locked", envBool("KO_LOCKED"),
+		"Resolve base images from the lockfile instead of .ko.yaml, failing if they drifted. Can also be enabled with KO_LOCKED=true.")
+	cmd.Flags().StringVar(&bo.LockfilePath, "lockfile", envOr("KO_LOCKFILE", build.DefaultLockfile),
+		"Path to the base image lockfile used with --locked (see `ko lock`). Can also be set with KO_LOCKFILE.")
 	bo.Trimpath = true
+}
+
+// envBool reports whether the named environment variable is set to a true
+// value (as parsed by strconv.ParseBool).
+func envBool(key string) bool {
+	v, err := strconv.ParseBool(os.Getenv(key))
+	return err == nil && v
+}
+
+// envOr returns the value of the named environment variable, or fallback
+// when it is unset or empty.
+func envOr(key, fallback string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return fallback
 }
 
 // LoadConfig reads build configuration from defaults, environment variables, and the `.ko.yaml` config file.
