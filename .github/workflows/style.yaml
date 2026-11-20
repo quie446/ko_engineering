@@ -20,11 +20,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/gofmt@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/gofmt@d496b2ab65497cac13d77ccd5038b8aae7e8c43b
         with:
           args: -s
 
@@ -40,11 +40,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/goimports@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/goimports@d496b2ab65497cac13d77ccd5038b8aae7e8c43b
 
   lint:
     name: Lint
@@ -60,17 +60,17 @@ jobs:
           persist-credentials: false
 
       - name: Set up Go
-        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
         with:
           go-version: 'stable'
 
-      - uses: chainguard-dev/actions/trailing-space@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/trailing-space@d496b2ab65497cac13d77ccd5038b8aae7e8c43b
         if: ${{ always() }}
 
-      - uses: chainguard-dev/actions/eof-newline@bed8050123fff65538e2db1902ff9404030c0221
+      - uses: chainguard-dev/actions/eof-newline@d496b2ab65497cac13d77ccd5038b8aae7e8c43b
         if: ${{ always() }}
 
-      - uses: reviewdog/action-misspell@d6429416b12b09b4e2768307d53bef58d172e962 # v1.27.0
+      - uses: reviewdog/action-misspell@c846b6b0996029d2d39540c8ffebebbd957072db # v1.31.0
         if: ${{ always() }}
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
